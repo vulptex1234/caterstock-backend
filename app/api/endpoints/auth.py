@@ -5,6 +5,7 @@ from app.schemas.schemas import Token, LineAuthURL, LineCallback
 from app.services.auth_service import AuthService
 import secrets
 from fastapi.responses import RedirectResponse
+from starlette.status import HTTP_302_FOUND
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ async def line_oauth_callback_get(code: str, state: str = None, db: Session = De
     try:
         # フロントエンドのコールバックページにリダイレクト
         frontend_callback_url = f"https://caterstock-frontend.vercel.app/auth/callback?code={code}&state={state}"
-        return RedirectResponse(url=frontend_callback_url)
+        return RedirectResponse(url=frontend_callback_url, status_code=HTTP_302_FOUND)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
