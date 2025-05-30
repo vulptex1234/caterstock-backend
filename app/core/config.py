@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # LINE OAuth
     LINE_CHANNEL_ID: Optional[str] = "2007495287"
     LINE_CHANNEL_SECRET: Optional[str] = "0d1a85852441bb77ee5993eeee60636d"
-    LINE_REDIRECT_URI: str = "https://caterstock-backend.vercel.app/auth/callback"
+    LINE_REDIRECT_URI: str = "LINE_REDIRECT_URI=https://caterstock-backend.onrender.com/api/v1/auth/line/callback"
     
     # LINE Notify
     LINE_NOTIFY_TOKEN: Optional[str] = None
