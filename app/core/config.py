@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # CORS origins for production
-    CORS_ORIGINS: list[str] = ["https://caterstock-frontend.vercel.app"]
+    CORS_ORIGINS: list[str] = [
+        "https://caterstock-frontend.vercel.app",
+        "http://localhost:3000"
+    ]
     
     # Database URL selection based on environment
     @property
