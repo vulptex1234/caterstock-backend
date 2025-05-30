@@ -60,22 +60,26 @@ class AuthService:
             raise ValueError("LINE credentials are not set")
         
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.line.me/oauth2/v2.1/token",
-                data={
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": settings.LINE_REDIRECT_URI,
-                    "client_id": settings.LINE_CHANNEL_ID,
-                    "client_secret": settings.LINE_CHANNEL_SECRET,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
-            )
-            
-            if response.status_code != 200:
-                raise ValueError("Failed to exchange code for token")
-            
-            return response.json()
+            try:
+                response = await client.post(
+                    "https://api.line.me/oauth2/v2.1/token",
+                    data={
+                        "grant_type": "authorization_code",
+                        "code": code,
+                        "redirect_uri": settings.LINE_REDIRECT_URI,
+                        "client_id": settings.LINE_CHANNEL_ID,
+                        "client_secret": settings.LINE_CHANNEL_SECRET,
+                    },
+                    headers={"Content-Type": "application/x-www-form-urlencoded"}
+                )
+                
+                if response.status_code != 200:
+                    error_data = response.json()
+                    raise ValueError(f"Failed to exchange code for token: {error_data}")
+                
+                return response.json()
+            except Exception as e:
+                raise ValueError(f"Error exchanging code for token: {str(e)}")
     
     @staticmethod
     async def get_line_profile(access_token: str):
