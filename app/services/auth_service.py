@@ -5,7 +5,10 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.models import User
 import httpx
+import logging
 
+# ロガーの設定
+logger = logging.getLogger(__name__)
 
 class AuthService:
     """認証関連のサービスクラス"""
@@ -59,41 +62,59 @@ class AuthService:
         if not settings.LINE_CHANNEL_ID or not settings.LINE_CHANNEL_SECRET:
             raise ValueError("LINE credentials are not set")
         
+        logger.info(f"Exchanging code for token with redirect_uri: {settings.LINE_REDIRECT_URI}")
+        
         async with httpx.AsyncClient() as client:
             try:
+                data = {
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": settings.LINE_REDIRECT_URI,
+                    "client_id": settings.LINE_CHANNEL_ID,
+                    "client_secret": settings.LINE_CHANNEL_SECRET,
+                }
+                logger.info(f"Token exchange request data: {data}")
+                
                 response = await client.post(
                     "https://api.line.me/oauth2/v2.1/token",
-                    data={
-                        "grant_type": "authorization_code",
-                        "code": code,
-                        "redirect_uri": settings.LINE_REDIRECT_URI,
-                        "client_id": settings.LINE_CHANNEL_ID,
-                        "client_secret": settings.LINE_CHANNEL_SECRET,
-                    },
+                    data=data,
                     headers={"Content-Type": "application/x-www-form-urlencoded"}
                 )
                 
-                if response.status_code != 200:
-                    error_data = response.json()
-                    raise ValueError(f"Failed to exchange code for token: {error_data}")
+                logger.info(f"Token exchange response status: {response.status_code}")
+                response_data = response.json()
+                logger.info(f"Token exchange response data: {response_data}")
                 
-                return response.json()
+                if response.status_code != 200:
+                    raise ValueError(f"Failed to exchange code for token: {response_data}")
+                
+                return response_data
             except Exception as e:
+                logger.error(f"Error during token exchange: {str(e)}")
                 raise ValueError(f"Error exchanging code for token: {str(e)}")
     
     @staticmethod
     async def get_line_profile(access_token: str):
         """LINEプロフィール情報を取得"""
+        logger.info("Fetching LINE profile")
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://api.line.me/v2/profile",
-                headers={"Authorization": f"Bearer {access_token}"}
-            )
-            
-            if response.status_code != 200:
-                raise ValueError("Failed to get LINE profile")
-            
-            return response.json()
+            try:
+                response = await client.get(
+                    "https://api.line.me/v2/profile",
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+                
+                logger.info(f"Profile response status: {response.status_code}")
+                response_data = response.json()
+                logger.info(f"Profile response data: {response_data}")
+                
+                if response.status_code != 200:
+                    raise ValueError(f"Failed to get LINE profile: {response_data}")
+                
+                return response_data
+            except Exception as e:
+                logger.error(f"Error fetching LINE profile: {str(e)}")
+                raise ValueError(f"Error fetching LINE profile: {str(e)}")
     
     @staticmethod
     def find_or_create_user(db: Session, line_id: str, name: str) -> User:
