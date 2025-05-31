@@ -62,19 +62,4 @@ class InventoryLog(Base):
     
     # Relationships
     item = relationship("Item", back_populates="inventory_logs")
-    user = relationship("User", back_populates="inventory_logs")
-
-
-class Drink(Base):
-    __tablename__ = "drinks"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    unit = Column(String, nullable=False)  # 例：個、本、kg
-    category = Column(Enum(ItemCategory), nullable=False)
-    inventory_type = Column(Enum(InventoryType), nullable=False)
-    threshold_low = Column(Integer, nullable=True)  # 個数管理のみ使用
-    threshold_high = Column(Integer, nullable=True)  # 個数管理のみ使用
-    
-    # Relationship
-    inventory_logs = relationship("InventoryLog", back_populates="drink") 
+    user = relationship("User", back_populates="inventory_logs") 

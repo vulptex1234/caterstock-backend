@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
-from app.models.models import Item, InventoryLog, User, InventoryType, StatusLevel, ItemCategory, Drink
+from app.models.models import Item, InventoryLog, User, InventoryType, StatusLevel, ItemCategory
 from app.schemas.schemas import (
     InventoryStatus, InventoryLogCreate, InventoryLogUpdate, InventoryLogCountUpdate
 )
@@ -14,56 +14,30 @@ class InventoryService:
     @staticmethod
     def get_current_inventory_status(db: Session) -> List[InventoryStatus]:
         """現在の在庫状況を取得"""
-        inventory_statuses = []
-
-        # アイテムの最新の在庫ログを取得
-        item_subquery = (
+        # 各アイテムの最新の在庫ログを取得
+        subquery = (
             db.query(
                 InventoryLog.item_id,
                 func.max(InventoryLog.updated_at).label("max_updated_at")
             )
-            .filter(InventoryLog.item_id.isnot(None))
             .group_by(InventoryLog.item_id)
             .subquery()
         )
         
-        item_results = (
+        results = (
             db.query(Item, InventoryLog, User)
             .join(InventoryLog, Item.id == InventoryLog.item_id)
             .join(User, InventoryLog.updated_by == User.id)
             .join(
-                item_subquery, 
-                (InventoryLog.item_id == item_subquery.c.item_id) & 
-                (InventoryLog.updated_at == item_subquery.c.max_updated_at)
-            )
-            .all()
-        )
-
-        # ドリンクの最新の在庫ログを取得
-        drink_subquery = (
-            db.query(
-                InventoryLog.drink_id,
-                func.max(InventoryLog.updated_at).label("max_updated_at")
-            )
-            .filter(InventoryLog.drink_id.isnot(None))
-            .group_by(InventoryLog.drink_id)
-            .subquery()
-        )
-        
-        drink_results = (
-            db.query(Drink, InventoryLog, User)
-            .join(InventoryLog, Drink.id == InventoryLog.drink_id)
-            .join(User, InventoryLog.updated_by == User.id)
-            .join(
-                drink_subquery, 
-                (InventoryLog.drink_id == drink_subquery.c.drink_id) & 
-                (InventoryLog.updated_at == drink_subquery.c.max_updated_at)
+                subquery, 
+                (InventoryLog.item_id == subquery.c.item_id) & 
+                (InventoryLog.updated_at == subquery.c.max_updated_at)
             )
             .all()
         )
         
-        # アイテムの在庫状況を処理
-        for item, log, user in item_results:
+        inventory_statuses = []
+        for item, log, user in results:
             if item.inventory_type == InventoryType.QUANTITY_MANAGEMENT:
                 # 量管理の場合
                 status = InventoryService._determine_status_for_quantity_management(log.status_level)
@@ -80,31 +54,6 @@ class InventoryService:
                 status = InventoryService._determine_status_for_count_management(log.quantity, item)
                 inventory_statuses.append(InventoryStatus(
                     item=item,
-                    current_quantity=log.quantity,
-                    current_status=None,
-                    last_updated=log.updated_at,
-                    updated_by_name=user.name,
-                    status=status
-                ))
-
-        # ドリンクの在庫状況を処理
-        for drink, log, user in drink_results:
-            if drink.inventory_type == InventoryType.QUANTITY_MANAGEMENT:
-                # 量管理の場合
-                status = InventoryService._determine_status_for_quantity_management(log.status_level)
-                inventory_statuses.append(InventoryStatus(
-                    drink=drink,
-                    current_quantity=None,
-                    current_status=log.status_level,
-                    last_updated=log.updated_at,
-                    updated_by_name=user.name,
-                    status=status
-                ))
-            else:
-                # 個数管理の場合
-                status = InventoryService._determine_status_for_count_management(log.quantity, drink)
-                inventory_statuses.append(InventoryStatus(
-                    drink=drink,
                     current_quantity=log.quantity,
                     current_status=None,
                     last_updated=log.updated_at,
@@ -254,38 +203,4 @@ class InventoryService:
         db.add(item)
         db.commit()
         db.refresh(item)
-        return item
-    
-    @staticmethod
-    def get_drinks(db: Session) -> List[Drink]:
-        """全ドリンクを取得"""
-        return db.query(Drink).all()
-    
-    @staticmethod
-    def get_drinks_by_category(db: Session, category: ItemCategory) -> List[Drink]:
-        """カテゴリ別ドリンクを取得"""
-        return db.query(Drink).filter(Drink.category == category).all()
-    
-    @staticmethod
-    def create_drink(
-        db: Session, 
-        name: str, 
-        unit: str, 
-        category: ItemCategory,
-        inventory_type: InventoryType,
-        threshold_low: Optional[int] = None, 
-        threshold_high: Optional[int] = None
-    ) -> Drink:
-        """新しいドリンクを作成"""
-        drink = Drink(
-            name=name,
-            unit=unit,
-            category=category,
-            inventory_type=inventory_type,
-            threshold_low=threshold_low,
-            threshold_high=threshold_high
-        )
-        db.add(drink)
-        db.commit()
-        db.refresh(drink)
-        return drink 
+        return item 

@@ -4,8 +4,7 @@ from typing import List, Optional
 from app.database.base import get_db
 from app.schemas.schemas import (
     InventoryStatus, InventoryLogCreate, InventoryLog,
-    Item, ItemCreate, User, InventoryLogUpdate, InventoryLogCountUpdate,
-    Drink, DrinkCreate
+    Item, ItemCreate, User, InventoryLogUpdate, InventoryLogCountUpdate
 )
 from app.services.inventory_service import InventoryService
 from app.services.auth_service import AuthService
@@ -153,47 +152,4 @@ async def create_item(
         inventory_type=item_data.inventory_type,
         threshold_low=item_data.threshold_low,
         threshold_high=item_data.threshold_high
-    )
-
-
-@router.get("/drinks", response_model=List[Drink])
-async def get_drinks(
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    """全ドリンクを取得"""
-    return InventoryService.get_drinks(db)
-
-
-@router.get("/drinks/category/{category}", response_model=List[Drink])
-async def get_drinks_by_category(
-    category: ItemCategory,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    """カテゴリ別ドリンクを取得"""
-    return InventoryService.get_drinks_by_category(db, category)
-
-
-@router.post("/drinks", response_model=Drink)
-async def create_drink(
-    drink_data: DrinkCreate,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    """新しいドリンクを作成（管理者のみ）"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can create drinks"
-        )
-    
-    return InventoryService.create_drink(
-        db=db,
-        name=drink_data.name,
-        unit=drink_data.unit,
-        category=drink_data.category,
-        inventory_type=drink_data.inventory_type,
-        threshold_low=drink_data.threshold_low,
-        threshold_high=drink_data.threshold_high
     ) 
