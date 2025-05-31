@@ -119,4 +119,24 @@ class LineAuthURL(BaseModel):
 
 class LineCallback(BaseModel):
     code: str
-    state: Optional[str] = None 
+    state: Optional[str] = None
+
+
+class DrinkBase(BaseModel):
+    name: str
+    unit: str
+    category: ItemCategory
+    inventory_type: InventoryType
+    threshold_low: Optional[int] = None
+    threshold_high: Optional[int] = None
+
+
+class DrinkCreate(DrinkBase):
+    pass
+
+
+class Drink(DrinkBase):
+    id: int
+
+    class Config:
+        from_attributes = True 
